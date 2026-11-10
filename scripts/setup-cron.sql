@@ -12,23 +12,31 @@
 -- O segredo fica no Vault, nunca numa migração nem no repositório.
 -- Os jobs são idempotentes: recriar substitui os agendamentos com o mesmo nome.
 
-create extension if not exists pg_cron with schema extensions;
+-- pg_cron instala no schema `cron`; pg_net no schema `extensions` (padrão Supabase).
+create extension if not exists pg_cron;
 create extension if not exists pg_net with schema extensions;
 
-select vault.create_secret('https://<PROJECT_REF>.supabase.co', 'ldt_project_url', 'URL base do projeto')
-where not exists (select 1 from vault.secrets where name = 'ldt_project_url');
+-- O role `postgres` não tem acesso direto a `vault.secrets`; usar a view
+-- `vault.decrypted_secrets` e as funções `vault.create_secret`/`vault.update_secret`.
+do $$
+declare
+  secret_id uuid;
+begin
+  select id into secret_id from vault.decrypted_secrets where name = 'ldt_project_url';
+  if secret_id is null then
+    perform vault.create_secret('https://<PROJECT_REF>.supabase.co', 'ldt_project_url', 'URL base do projeto');
+  else
+    perform vault.update_secret(secret_id, 'https://<PROJECT_REF>.supabase.co');
+  end if;
 
-select vault.create_secret('<CRON_SECRET>', 'ldt_cron_secret', 'Segredo partilhado com a Edge Function api')
-where not exists (select 1 from vault.secrets where name = 'ldt_cron_secret');
-
--- Atualiza os segredos se já existirem.
-update vault.secrets
-set secret = 'https://<PROJECT_REF>.supabase.co'
-where name = 'ldt_project_url';
-
-update vault.secrets
-set secret = '<CRON_SECRET>'
-where name = 'ldt_cron_secret';
+  select id into secret_id from vault.decrypted_secrets where name = 'ldt_cron_secret';
+  if secret_id is null then
+    perform vault.create_secret('<CRON_SECRET>', 'ldt_cron_secret', 'Segredo partilhado com a Edge Function api');
+  else
+    perform vault.update_secret(secret_id, '<CRON_SECRET>');
+  end if;
+end;
+$$;
 
 create or replace function public.ldt_cron_call(job text)
 returns bigint
