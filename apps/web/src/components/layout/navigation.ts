@@ -21,7 +21,7 @@ export interface NavItem {
 export const NAV_ITEMS: readonly NavItem[] = [
   {
     to: '/',
-    label: 'Centro de Controlo',
+    label: 'Centro de Controle',
     shortLabel: 'CCO',
     description: 'Mapa operacional da rede',
     icon: RadioTower,
@@ -72,7 +72,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
 ] as const;
 
 export const PAGE_TITLES: Record<string, { title: string; kicker: string }> = {
-  '/': { title: 'Centro de Controlo Operacional', kicker: 'Rede metroferroviária de Londres' },
+  '/': { title: 'Centro de Controle Operacional', kicker: 'Rede metroferroviária de Londres' },
   '/dashboard': { title: 'Dashboard operacional', kicker: 'Indicadores e histórico' },
   '/alerts': { title: 'Alertas e disrupções', kicker: 'Estado da rede' },
   '/analytics': { title: 'Análise da rede', kicker: 'Grafo, resiliência e footfall' },
