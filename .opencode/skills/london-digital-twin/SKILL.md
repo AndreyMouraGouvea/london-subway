@@ -11,7 +11,9 @@ never calls TfL directly.
 
 ## Current scope
 
-- **Project status (2026-11-10):** Phase 6 delivered; the project is in maintenance.
+- **Project status (2026-11-10):** Phase 6 delivered; deployed to production
+  (Cloudflare Pages + Supabase `lgjwhvzejtcunhzsmalw`, `eu-west-2`); the project is
+  in maintenance.
   New expansions require an explicit request.
 - **Delivered:** Phase 0–6 — ingestion/history/realtime, CCO map, analytics,
   RODS, auth, favorites, personalized alerts, read-only admin, printable PDF and
@@ -39,6 +41,8 @@ never calls TfL directly.
 9. `references/phase-6-product.md` — auth, RLS, favorites, alerts, admin, PDF and
    boroughs.
 10. `references/validation.md` — commands and checks.
+11. `references/deployment.md` — production topology, Cloudflare Pages settings,
+    Supabase Cron and validated production counts.
 
 ## Non-negotiable data rules
 
