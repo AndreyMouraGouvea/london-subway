@@ -47,6 +47,10 @@ jobs:
         run: cp apps/web/dist/index.html apps/web/dist/404.html
 
       - uses: actions/configure-pages@v5
+        with:
+          # Ativa o Pages (Source: GitHub Actions) na primeira execução, sem
+          # precisar de configuração manual no repositório.
+          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:
