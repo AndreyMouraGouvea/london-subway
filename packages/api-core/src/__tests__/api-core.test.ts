@@ -118,6 +118,22 @@ describe('API router', () => {
     expect(body.meta?.dataSourceStatus).toBe('live');
   });
 
+  it('matches allowed origins ignoring host case', async () => {
+    const app = createApi({
+      config: createApiConfig({ allowedOrigins: ['https://AndreyMouraGouvea.github.io'] }),
+      cache: new MemoryCache(),
+    });
+
+    const response = await app.request('/health', {
+      headers: { Origin: 'https://andreymouragouvea.github.io' },
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('access-control-allow-origin')).toBe(
+      'https://andreymouragouvea.github.io',
+    );
+  });
+
   it('returns a 404 envelope for unknown routes', async () => {
     const app = createApi({
       config: createApiConfig(),

@@ -15,7 +15,7 @@ password, `service_role` or the cron secret in this file or anywhere in the repo
 | Supabase org | `pijjouzoyhrxpgoayrdr` |
 | API base | `https://lgjwhvzejtcunhzsmalw.supabase.co/functions/v1/api` |
 | Auth site URL | `https://andreyMouraGouvea.github.io/london-subway/` |
-| CORS origin | `https://andreyMouragouvea.github.io` (no path) |
+| CORS origin | `https://andreymouragouvea.github.io` (lowercase, no path) |
 
 The API stays on Supabase Edge Functions. Do not migrate it to Cloudflare
 Workers: the entrypoint is Deno/Hono with a Supabase client and shared
@@ -70,11 +70,12 @@ Set with `npx supabase secrets set --project-ref lgjwhvzejtcunhzsmalw`:
 
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected by the runtime.
 
-CORS is exact-match: the GitHub Pages origin is `https://andreyMouragouvea.github.io`
-(no path). Cloudflare preview URLs differ per deploy, so previews only work if a
-fixed branch alias is added to `ALLOWED_ORIGINS`. `mailer_autoconfirm` is enabled
-(no SMTP), which means sign-up completes immediately; configure SMTP and disable
-it before treating the deployment as a real product.
+CORS is exact-match, but host case is ignored: browsers send the `Origin` host
+in lowercase, so configure `https://andreymouragouvea.github.io`. Cloudflare
+preview URLs differ per deploy, so previews only work if a fixed branch alias is
+added to `ALLOWED_ORIGINS`. `mailer_autoconfirm` is enabled (no SMTP), which
+means sign-up completes immediately; configure SMTP and disable it before
+treating the deployment as a real product.
 
 ## Supabase Cron
 

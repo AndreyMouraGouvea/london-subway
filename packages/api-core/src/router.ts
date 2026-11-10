@@ -59,6 +59,12 @@ export function createApi(deps: ApiDependencies): Hono<AppEnv> {
       }),
   };
 
+  // O browser normaliza scheme e host do header Origin para minúsculas.
+  // Comparar com a lista configurada sem distinguir maiúsculas evita 403 em
+  // origens introduzidas à mão (ex.: `https://Andrey.github.io`).
+  const allowedOrigins = new Set(config.allowedOrigins.map((origin) => origin.toLowerCase()));
+  const isAllowedOrigin = (origin: string) => allowedOrigins.has(origin.toLowerCase());
+
   app.use('*', requestIdMiddleware);
   app.use('*', loggingMiddleware);
 
@@ -66,7 +72,7 @@ export function createApi(deps: ApiDependencies): Hono<AppEnv> {
   // para que um proxy que injete "*" não abra a API para qualquer site.
   app.use('*', async (c, next) => {
     const origin = c.req.header('origin');
-    if (origin && !config.allowedOrigins.includes(origin)) {
+    if (origin && !isAllowedOrigin(origin)) {
       const now = new Date();
       const meta = metaUnavailable(
         buildMeta({
@@ -98,7 +104,7 @@ export function createApi(deps: ApiDependencies): Hono<AppEnv> {
     cors({
       origin: (origin) => {
         if (!origin) return '*';
-        return config.allowedOrigins.includes(origin) ? origin : null;
+        return isAllowedOrigin(origin) ? origin : null;
       },
       allowMethods: ['GET', 'POST', 'OPTIONS'],
       allowHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
