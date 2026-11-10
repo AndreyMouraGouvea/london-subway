@@ -1,0 +1,30 @@
+{
+  "name": "@ldt/ingest",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "check": "tsx src/index.ts --check",
+    "footfall": "tsx src/index.ts --footfall",
+    "footfall:dry": "tsx src/index.ts --footfall --dry-run",
+    "annual": "tsx src/index.ts --annual",
+    "numbat": "tsx src/index.ts --numbat",
+    "crowding": "tsx src/index.ts --crowding",
+    "rods": "tsx src/index.ts --rods",
+    "rods:dry": "tsx src/index.ts --rods --dry-run",
+    "ingest:all": "tsx src/index.ts --all",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "exceljs": "^4.4.0",
+    "fflate": "^0.8.3",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

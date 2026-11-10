@@ -1,0 +1,208 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    --ink-950: #070b12;
+    --ink-900: #0b111b;
+    --ink-800: #111a28;
+    --line: rgba(148, 163, 184, 0.18);
+    --muted: #8b9bb4;
+  }
+
+  * {
+    @apply border-ink-700;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  html {
+    /* Escala tipográfica global: todos os tamanhos rem acompanham este valor. */
+    font-size: 18px;
+  }
+
+  body {
+    @apply bg-ink-950 text-slate-100 antialiased;
+    font-feature-settings:
+      'cv02' 1,
+      'cv03' 1,
+      'cv04' 1;
+  }
+
+  ::selection {
+    background: rgba(57, 208, 255, 0.25);
+    color: #fff;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #25344a;
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #344763;
+    background-clip: padding-box;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply rounded-2xl border border-white/10 bg-ink-900/90 shadow-panel backdrop-blur-xl;
+  }
+
+  .panel-header {
+    @apply flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3;
+  }
+
+  .kicker {
+    @apply font-mono text-[0.625rem] font-medium uppercase tracking-[0.18em] text-slate-500;
+  }
+
+  .data-badge {
+    @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 font-mono text-[0.625rem] uppercase tracking-[0.12em];
+  }
+
+  .icon-button {
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-accent/40;
+  }
+
+  .nav-link {
+    @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-400 transition hover:bg-white/5 hover:text-slate-100;
+  }
+
+  .nav-link-active {
+    @apply bg-accent/10 text-accent shadow-glow;
+  }
+
+  .stat-card {
+    @apply rounded-xl border border-white/10 bg-white/[0.03] p-3.5;
+  }
+
+  .table-shell {
+    @apply overflow-hidden rounded-2xl border border-white/10 bg-ink-900/60;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .map-fade {
+    mask-image: linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%);
+  }
+}
+
+/* MapLibre: controles e atribuição no tema escuro */
+.maplibregl-ctrl-group {
+  background: rgba(11, 17, 27, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35) !important;
+}
+
+.maplibregl-ctrl-group button {
+  filter: invert(0.85);
+}
+
+.maplibregl-ctrl-attrib {
+  background: rgba(7, 11, 18, 0.72) !important;
+  color: #94a3b8 !important;
+  font-size: 11px !important;
+}
+
+.maplibregl-ctrl-attrib a {
+  color: #cbd5e1 !important;
+}
+
+.maplibregl-popup-content {
+  background: #0b111b !important;
+  color: #e2e8f0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5) !important;
+}
+
+.maplibregl-popup-tip {
+  border-top-color: #0b111b !important;
+  border-bottom-color: #0b111b !important;
+}
+
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  html,
+  body,
+  #root {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  aside,
+  header,
+  nav,
+  .no-print {
+    display: none !important;
+  }
+
+  main,
+  .h-dvh,
+  .overflow-y-auto {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .print-report,
+  .print-report * {
+    color: #111 !important;
+  }
+
+  .print-report .panel,
+  .print-report .stat-card,
+  .print-report .rounded-xl,
+  .print-report .rounded-lg {
+    background: #fff !important;
+    border-color: #d1d5db !important;
+    box-shadow: none !important;
+  }
+
+  .print-report .kicker {
+    color: #4b5563 !important;
+  }
+
+  .print-report table {
+    page-break-inside: auto;
+  }
+
+  .print-report tr {
+    page-break-inside: avoid;
+  }
+}

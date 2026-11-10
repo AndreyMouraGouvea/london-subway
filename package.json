@@ -1,0 +1,51 @@
+{
+  "name": "london-digital-twin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Digital twin operacional do sistema metroferroviário de Londres",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c cyan,magenta \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:web": "npm run dev -w @ldt/web",
+    "dev:api": "npm run dev -w @ldt/api",
+    "build": "npm run build -w @ldt/web",
+    "build:web": "npm run build -w @ldt/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:reset": "supabase db reset",
+    "edge:build": "node scripts/build-edge.mjs",
+    "supabase:serve": "npm run edge:build && supabase functions serve api --env-file .env.local",
+    "supabase:deploy": "npm run edge:build && supabase functions deploy",
+    "ingest": "npm run start -w @ldt/ingest",
+    "ingest:footfall": "npm run footfall -w @ldt/ingest",
+    "ingest:annual": "npm run annual -w @ldt/ingest",
+    "ingest:numbat": "npm run numbat -w @ldt/ingest",
+    "ingest:crowding": "npm run crowding -w @ldt/ingest",
+    "ingest:rods": "npm run rods -w @ldt/ingest",
+    "ingest:all": "npm run ingest:all -w @ldt/ingest"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "concurrently": "^9.1.2",
+    "esbuild": "^0.25.12",
+    "eslint": "^9.18.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.18",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
+    "supabase": "^2.15.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0",
+    "vitest": "^5.1.0"
+  }
+}
