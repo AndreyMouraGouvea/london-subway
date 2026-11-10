@@ -21,6 +21,40 @@ The API stays on Supabase Edge Functions. Do not migrate it to Cloudflare
 Workers: the entrypoint is Deno/Hono with a Supabase client and shared
 `packages/api-core`.
 
+## Current status (2026-11-10, end of day)
+
+- Frontend live on GitHub Pages; verified in headless Edge: map renders, 20/20
+  lines, 509 stations, 15 active alerts, "API LIGADA" and "TEMPO real".
+- Edge Function deployed, `/health` returns `database: ok`.
+- All 12 migrations + seed applied; production counts match the local baseline
+  (see the table below).
+- Supabase Cron scheduled and proven: `net._http_response` shows HTTP 200 from
+  `public.ldt_cron_call('status')`.
+- Auth: `site_url` and redirect list point at the Pages URL;
+  `mailer_autoconfirm = true` (no SMTP), so sign-up completes instantly.
+- One demo account exists in production (`demo@londondigitaltwin.app`, admin).
+  Its password is intentionally **not** stored in the repo — reset it from the
+  Supabase dashboard when needed.
+- Two CORS defects were found and fixed in production: the allowlist must use a
+  lowercase host, and the router now compares origins case-insensitively.
+
+## Deploying
+
+```bash
+# Frontend (GitHub Pages): push to main and the workflow deploys.
+git push origin main
+
+# Backend (Edge Function): required after any change in packages/api-core,
+# packages/shared or supabase/functions.
+npm run supabase:deploy -- --no-verify-jwt
+
+# Cron (only when the project or the cron secret changes).
+# Execute scripts/setup-cron.sql with <PROJECT_REF> and <CRON_SECRET> replaced.
+```
+
+A frontend push does **not** redeploy the Edge Function, and a function deploy
+does **not** publish the frontend. Both are needed for a full release.
+
 ## GitHub Pages
 
 Deploy is handled by `.github/workflows/deploy-pages.yml` on every push to
@@ -140,12 +174,31 @@ flows and train loading share `station_crowding_profiles`, distinguished by
 - Redeploy the function after backend changes: `npm run supabase:deploy -- --no-verify-jwt`.
 - Revert to a previous function version from the Supabase dashboard if a deploy
   breaks production.
+- Check the deployed frontend without a browser session:
+
+```powershell
+msedge --headless=new --disable-gpu --virtual-time-budget=20000 `
+  --screenshot="$env:TEMP\ldt.png" "https://andreymouragouvea.github.io/london-subway/"
+```
+
+- Check the published bundle for a wrong or missing base path:
+
+```powershell
+$idx = curl.exe -s "https://andreymouragouvea.github.io/london-subway/"
+$js = [regex]::Match($idx, 'src="([^"]+index-[^"]+\.js)"').Groups[1].Value
+curl.exe -s "https://andreymouragouvea.github.io$js" | Select-String 'london-subway'
+```
 
 ## Credential hygiene
 
-- The Supabase access token and database password were shared in chat; rotate
-  both after the deployment is validated (Account → Access Tokens; Project
-  Settings → Database → Reset password).
+- The Supabase access token and database password were shared in chat during
+  setup; **rotate both** (Account → Access Tokens; Project Settings → Database →
+  Reset password) and re-run `npx supabase link` locally afterwards.
 - The `service_role` key must only exist in the local shell used for ingestion.
 - The GitHub Actions build only receives the anon key (repository variables are
   optional; the workflow has public fallbacks).
+- The demo account password is not in the repo. Rotate it or delete the account
+  before opening registration to the public.
+- The Git Credential Manager token stored on the workstation has `repo` and
+  `workflow` scopes and admin rights on the repository. It was used to enable
+  Pages; treat it as a local secret.

@@ -33,11 +33,20 @@ Digital twin operacional do sistema metroferroviário de Londres, construído co
 - Agregados horários particionados por mês, rollup no fim de cada `sync-status` e retenção auditável na base de dados.
 - Edge Function `api` empacotada por esbuild, com `/health`, CORS e rotas de sincronização protegidas por segredo.
 - Supabase: migrações com PostGIS, tabelas, índices, views, RLS, Realtime e Storage.
-- Configs de deploy Cloudflare Pages e Netlify, CI e documentação.
+- Configs de deploy GitHub Pages (GitHub Actions), Cloudflare Pages e Netlify, CI e documentação.
+
+### Produção (2026-11-10)
+
+- Frontend: <https://andreymouragouvea.github.io/london-subway/> (GitHub Pages, deploy automático em cada push para `main`).
+- API: `https://lgjwhvzejtcunhzsmalw.supabase.co/functions/v1/api` (Supabase Edge Function, `eu-west-2`).
+- Base de dados: projeto Supabase `lgjwhvzejtcunhzsmalw` com os mesmos volumes da base local validada (20 linhas, 509 estações, 705 relações, 286 190 registos de footfall, 428 annual counts, 180 observações NUMBAT, 22 680 link flows, 57 453 train loadings e 121 716 perfis RODS).
+- Atualização de dados por Supabase Cron: status a cada 2 min, disrupções a cada 5 min, referência e limpeza diariamente.
+- Auth em modo demo (sem SMTP): as confirmações de email estão desativadas, por isso o registo completa-se de imediato.
+- Detalhes de operação e higiene de credenciais: `.opencode/skills/london-digital-twin/references/deployment.md`.
 
 Nenhum dado operacional fictício é exibido. Quando a fonte falha, a API devolve cache/stale ou indisponibilidade com timestamp.
 
-Validações executadas: migrações + seed aplicados; RLS bloqueando `api_cache` e RPCs internas; trigger PostGIS; view de status; sync real da TfL; 509 estações canónicas; footfall, annual counts, NUMBAT, crowding 2017 e RODS 2017 ingeridos; endpoints de rede/linha/estação/arrivals/dashboard/histórico/jobs/análise; CORS 403 para origem não permitida; `npm run lint`, `typecheck`, `test` (59), `build` e `format:check`.
+Validações executadas: migrações + seed aplicados; RLS bloqueando `api_cache` e RPCs internas; trigger PostGIS; view de status; sync real da TfL; 509 estações canónicas; footfall, annual counts, NUMBAT, crowding 2017 e RODS 2017 ingeridos; endpoints de rede/linha/estação/arrivals/dashboard/histórico/jobs/análise; CORS 403 para origem não permitida; `npm run lint`, `typecheck`, `test` (60), `build` e `format:check`.
 
 ## Requisitos
 

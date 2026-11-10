@@ -11,10 +11,15 @@ never calls TfL directly.
 
 ## Current scope
 
-- **Project status (2026-11-10):** Phase 6 delivered; deployed to production
+- **Project status (2026-11-10):** Phase 6 delivered and **live in production**
   (GitHub Pages + Supabase `lgjwhvzejtcunhzsmalw`, `eu-west-2`); the project is
   in maintenance.
   New expansions require an explicit request.
+- **Production:** frontend on GitHub Pages
+  (`https://andreymouragouvea.github.io/london-subway/`, deployed by GitHub
+  Actions), API on the Supabase Edge Function `api`
+  (`https://lgjwhvzejtcunhzsmalw.supabase.co/functions/v1/api`), data refreshed by
+  Supabase Cron. See `references/deployment.md`.
 - **Delivered:** Phase 0–6 — ingestion/history/realtime, CCO map, analytics,
   RODS, auth, favorites, personalized alerts, read-only admin, printable PDF and
   ONS boroughs.
@@ -41,8 +46,8 @@ never calls TfL directly.
 9. `references/phase-6-product.md` — auth, RLS, favorites, alerts, admin, PDF and
    boroughs.
 10. `references/validation.md` — commands and checks.
-11. `references/deployment.md` — production topology, Cloudflare Pages settings,
-    Supabase Cron and validated production counts.
+11. `references/deployment.md` — production topology, GitHub Pages workflow,
+    Supabase Cron, credential hygiene and validated production counts.
 
 ## Non-negotiable data rules
 
@@ -135,6 +140,23 @@ curl -X POST -H "x-cron-secret: local-dev-cron-secret" http://localhost:8787/syn
 ```
 
 Or run `scripts/sync-local.ps1`.
+
+## Production deployment
+
+- Deploy path: push to `main` → GitHub Actions `Deploy (GitHub Pages)` → Pages.
+  `.github/workflows/deploy-pages.yml` runs `npm ci`, `npm run build` with
+  `VITE_BASE_PATH=/london-subway/`, copies `index.html` to `404.html` (GitHub
+  Pages has no rewrites) and uploads the artifact. Cloudflare Pages remains
+  configured as an alternative; there `VITE_BASE_PATH` must stay unset.
+- The site lives in a subpath. Every runtime asset path must be built from
+  `import.meta.env.BASE_URL`; a hardcoded leading `/` breaks on GitHub Pages.
+- Backend changes need `npm run supabase:deploy -- --no-verify-jwt`. The Pages
+  workflow only rebuilds the frontend; the Edge Function is not redeployed.
+- Supabase Cron (`scripts/setup-cron.sql`) refreshes status (2 min), disruptions
+  (5 min), reference and cleanup (daily). There is **no manual sync button** in
+  the UI by design; the refresh button only invalidates queries.
+- Production credentials stay out of the repo. The Supabase access token and the
+  database password were shared in chat during setup and still need rotating.
 
 ## Current data shape (Phase 2 validated)
 
@@ -478,6 +500,22 @@ See `references/phase-3-map.md` for concrete component and layer details.
   the report self-contained and test `Page.printToPDF`.
 - Boroughs are ONS OGL v3.0; keep attribution. Do not substitute an unlicensed
   boundary file or invent PTAL.
+
+- CORS origins must be stored with a **lowercase** host: browsers send the
+  `Origin` host lowercased. The router now compares case-insensitively, but
+  `ALLOWED_ORIGINS` should still be lowercase. A mismatch returns 403
+  `origin_not_allowed` and the UI shows "API OFFLINE" with every panel empty.
+- On GitHub Pages a deep link returns HTTP 404 with the SPA HTML (from
+  `404.html`). That is expected, not a broken deploy.
+- `vault.secrets` is not readable by the `postgres` role; use the
+  `vault.decrypted_secrets` view with `vault.create_secret`/`vault.update_secret`.
+- The first Pages deployment needs the site to exist: `enablement: true` in
+  `actions/configure-pages` or `POST /repos/{owner}/{repo}/pages` with
+  `build_type: "workflow"`. Later deploys need only `pages: write` and
+  `id-token: write`.
+- Headless Edge renders the deployed SPA well enough to verify production:
+  `msedge --headless=new --disable-gpu --virtual-time-budget=20000
+  --screenshot=out.png <url>`. Use it to confirm the map, panels and data badges.
 
 ## Definition of done for a phase
 
