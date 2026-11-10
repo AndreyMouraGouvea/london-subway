@@ -283,7 +283,73 @@ O harness local `apps/api` continua funcionando independentemente, sem Docker.
 
 ## Deploy
 
-### Cloudflare Pages
+Arquitetura de produção:
+
+- **Cloudflare Pages** serve o frontend estático (`apps/web/dist`) ligado ao GitHub.
+- **Supabase** (`eu-west-2`) fornece Postgres/PostGIS, Auth, RLS, Realtime e a Edge Function `api`.
+- **Supabase Cron** (`pg_cron` + `pg_net`) chama os endpoints de sincronização.
+
+### 1. Supabase
+
+```bash
+npx supabase login
+npx supabase projects create london-digital-twin \
+  --org-id <ORG_ID> --region eu-west-2 --db-password '<DB_PASSWORD>'
+npx supabase link --project-ref <PROJECT_REF> --password '<DB_PASSWORD>'
+npx supabase db push --include-seed
+npm run supabase:deploy -- --no-verify-jwt
+```
+
+O `--include-seed` é obrigatório: as migrações não aplicam modos, linhas, severidades nem fontes de dados.
+
+Secrets da função:
+
+```bash
+npx supabase secrets set \
+  ALLOWED_ORIGINS=https://<PROJETO>.pages.dev \
+  LDT_CRON_SECRET='<SEGREDO_FORTE>'
+```
+
+`TFL_APP_KEY` é opcional; sem ela a API usa o limite anónimo da TfL:
+
+```bash
+npx supabase secrets set TFL_APP_KEY='<CHAVE>'
+```
+
+A função `api` é pública (`verify_jwt = false`) para leitura; os endpoints `/sync/*` exigem o header `x-cron-secret`.
+
+### 2. Dados de produção
+
+```bash
+curl -X POST -H "x-cron-secret: <SEGREDO>" \
+  https://<PROJECT_REF>.supabase.co/functions/v1/api/sync/reference
+
+SUPABASE_URL=https://<PROJECT_REF>.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY=<SERVICE_ROLE> \
+npm run ingest:all
+
+curl -X POST -H "x-cron-secret: <SEGREDO>" .../api/sync/status
+curl -X POST -H "x-cron-secret: <SEGREDO>" .../api/sync/disruptions
+```
+
+A service role fica apenas no ambiente local que corre o ingest; nunca no browser nem no repositório.
+
+### 3. Cloudflare Pages
+
+1. **Workers & Pages → Create → Pages → Connect to Git**.
+2. Repositório `london-subway`, branch `main`.
+3. Build command `npm run build`, output `apps/web/dist`, root `/`.
+4. Variável `NODE_VERSION=22.12.0` (ou o `.nvmrc`).
+5. Variáveis de build:
+
+```text
+VITE_API_BASE_URL=https://<PROJECT_REF>.supabase.co/functions/v1/api
+VITE_SUPABASE_URL=https://<PROJECT_REF>.supabase.co
+VITE_SUPABASE_ANON_KEY=<ANON_KEY>
+VITE_MAP_STYLE_URL=https://tiles.openfreemap.org/styles/dark
+```
+
+Deploy manual alternativo:
 
 ```bash
 npm run build
@@ -292,30 +358,29 @@ npx wrangler pages deploy apps/web/dist --project-name london-digital-twin
 
 Configuração em `wrangler.jsonc` e cabeçalhos em `apps/web/public/_headers`.
 
+### 4. Auth e CORS
+
+No Supabase, em **Authentication → URL Configuration**:
+
+- Site URL: domínio do Pages.
+- Redirect URLs: o mesmo domínio (e `http://localhost:5173` para desenvolvimento local).
+
+`ALLOWED_ORIGINS` compara origens exatas: os previews do Pages mudam de URL a cada deploy. Usa um alias fixo por branch ou mantém os previews sem acesso à API.
+
+### 5. Supabase Cron
+
+Depois de publicar a função e definir `LDT_CRON_SECRET`, executa `scripts/setup-cron.sql` com o `project_ref` e o segredo substituídos. O script guarda ambos no Vault e agenda:
+
+| Job | Cron | Endpoint |
+|---|---|---|
+| `ldt-sync-status` | `*/2 * * * *` | `/api/sync/status` |
+| `ldt-sync-disruptions` | `*/5 * * * *` | `/api/sync/disruptions` |
+| `ldt-sync-reference` | `15 3 * * *` | `/api/sync/reference` |
+| `ldt-sync-cleanup` | `45 3 * * *` | `/api/sync/cleanup` |
+
 ### Netlify
 
-O `netlify.toml` já define:
-
-- build: `npm run build`
-- publish: `apps/web/dist`
-- redirect SPA e headers de segurança.
-
-### Supabase
-
-```bash
-npx supabase login
-npx supabase link --project-ref <PROJECT_REF>
-npx supabase db push
-npm run supabase:deploy -- --no-verify-jwt
-```
-
-Configure os secrets:
-
-```bash
-npx supabase secrets set TFL_APP_KEY=... ALLOWED_ORIGINS=https://seu-dominio.com
-```
-
-A função `api` é pública (`verify_jwt = false`) para leitura; endpoints de sincronização futuros serão protegidos por `service_role`/segredo de cron.
+O `netlify.toml` mantém-se como alternativa: build `npm run build`, publish `apps/web/dist`, redirect SPA e headers de segurança.
 
 ## Segurança
 
