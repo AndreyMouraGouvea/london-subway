@@ -8,38 +8,53 @@ password, `service_role` or the cron secret in this file or anywhere in the repo
 | Component | Value |
 |---|---|
 | Repository | `https://github.com/AndreyMouraGouvea/london-subway` (branch `main`) |
-| Frontend | Cloudflare Pages project `london-digital-twin` |
+| Frontend | GitHub Pages, workflow `.github/workflows/deploy-pages.yml` |
+| Frontend URL | `https://andreyMouraGouvea.github.io/london-subway/` |
 | Supabase project | `lgjwhvzejtcunhzsmalw` |
 | Supabase region | `eu-west-2` (London) |
 | Supabase org | `pijjouzoyhrxpgoayrdr` |
 | API base | `https://lgjwhvzejtcunhzsmalw.supabase.co/functions/v1/api` |
-| Auth site URL | `https://london-digital-twin.pages.dev` |
+| Auth site URL | `https://andreyMouraGouvea.github.io/london-subway/` |
+| CORS origin | `https://andreyMouragouvea.github.io` (no path) |
 
 The API stays on Supabase Edge Functions. Do not migrate it to Cloudflare
 Workers: the entrypoint is Deno/Hono with a Supabase client and shared
 `packages/api-core`.
 
-## Cloudflare Pages build settings
+## GitHub Pages
 
-- Framework preset: none (Vite is invoked by the npm script).
-- Build command: `npm run build`
-- Output directory: `apps/web/dist`
-- Root directory: `/`
-- `NODE_VERSION=22.12.0` (also pinned in `.nvmrc`)
+Deploy is handled by `.github/workflows/deploy-pages.yml` on every push to
+`main` (or `workflow_dispatch`). The repository must have **Settings → Pages →
+Source: GitHub Actions**.
 
-Build variables (all public):
+- Node 22.12.0, `npm ci`, `npm run build`.
+- The site lives under `/london-subway/`, so the build sets
+  `VITE_BASE_PATH=/london-subway/`. `vite.config.ts` maps it to `base`, and
+  `main.tsx` derives the router `basename` from `import.meta.env.BASE_URL`.
+- Runtime asset paths must be base-aware: the MapLibre worker
+  (`${BASE_URL}maplibre-gl-worker.mjs`) and the boroughs GeoJSON
+  (`${BASE_URL}london-boroughs.geojson`). Never hardcode a leading `/`.
+- GitHub Pages has no rewrites: the workflow copies `index.html` to `404.html`
+  so SPA deep links boot. It returns HTTP 404 for crawlers, which is acceptable
+  here.
+- GitHub Pages cannot set response headers, so the CSP lives in a
+  `<meta http-equiv="Content-Security-Policy">` in `apps/web/index.html`.
+  `frame-ancestors` is ignored in meta CSP.
+
+Build variables (all public; repository variables can override the workflow
+fallbacks):
 
 ```text
+VITE_BASE_PATH=/london-subway/
 VITE_API_BASE_URL=https://lgjwhvzejtcunhzsmalw.supabase.co/functions/v1/api
 VITE_SUPABASE_URL=https://lgjwhvzejtcunhzsmalw.supabase.co
 VITE_SUPABASE_ANON_KEY=<anon key of the project>
 VITE_MAP_STYLE_URL=https://tiles.openfreemap.org/styles/dark
 ```
 
-`apps/web/public/_headers` (CSP) and `_redirects` (SPA fallback) are copied into
-the build. The CSP already allows `https://*.supabase.co` and
-`wss://*.supabase.co`, so no change is needed unless a custom Supabase domain is
-used.
+Cloudflare Pages remains a supported alternative: `wrangler.jsonc` points at
+`apps/web/dist`, `_headers` carries the CSP and `_redirects` the SPA fallback.
+There `VITE_BASE_PATH` must stay unset so the site is served from `/`.
 
 ## Edge Function secrets
 
@@ -53,10 +68,11 @@ Set with `npx supabase secrets set --project-ref lgjwhvzejtcunhzsmalw`:
 
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected by the runtime.
 
-CORS is exact-match: every Cloudflare preview URL differs, so previews only work
-if a fixed branch alias is added to `ALLOWED_ORIGINS`. `mailer_autoconfirm` is
-enabled (no SMTP), which means sign-up completes immediately; configure SMTP and
-disable it before treating the deployment as a real product.
+CORS is exact-match: the GitHub Pages origin is `https://andreyMouragouvea.github.io`
+(no path). Cloudflare preview URLs differ per deploy, so previews only work if a
+fixed branch alias is added to `ALLOWED_ORIGINS`. `mailer_autoconfirm` is enabled
+(no SMTP), which means sign-up completes immediately; configure SMTP and disable
+it before treating the deployment as a real product.
 
 ## Supabase Cron
 
@@ -128,4 +144,5 @@ flows and train loading share `station_crowding_profiles`, distinguished by
   both after the deployment is validated (Account → Access Tokens; Project
   Settings → Database → Reset password).
 - The `service_role` key must only exist in the local shell used for ingestion.
-- The Cloudflare Pages build only receives the anon key.
+- The GitHub Actions build only receives the anon key (repository variables are
+  optional; the workflow has public fallbacks).

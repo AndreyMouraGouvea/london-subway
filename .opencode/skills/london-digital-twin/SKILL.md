@@ -12,7 +12,7 @@ never calls TfL directly.
 ## Current scope
 
 - **Project status (2026-11-10):** Phase 6 delivered; deployed to production
-  (Cloudflare Pages + Supabase `lgjwhvzejtcunhzsmalw`, `eu-west-2`); the project is
+  (GitHub Pages + Supabase `lgjwhvzejtcunhzsmalw`, `eu-west-2`); the project is
   in maintenance.
   New expansions require an explicit request.
 - **Delivered:** Phase 0–6 — ingestion/history/realtime, CCO map, analytics,

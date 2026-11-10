@@ -285,9 +285,11 @@ O harness local `apps/api` continua funcionando independentemente, sem Docker.
 
 Arquitetura de produção:
 
-- **Cloudflare Pages** serve o frontend estático (`apps/web/dist`) ligado ao GitHub.
+- **GitHub Pages** serve o frontend estático (`apps/web/dist`) via GitHub Actions.
 - **Supabase** (`eu-west-2`) fornece Postgres/PostGIS, Auth, RLS, Realtime e a Edge Function `api`.
 - **Supabase Cron** (`pg_cron` + `pg_net`) chama os endpoints de sincronização.
+
+Cloudflare Pages continua suportado como alternativa (ver abaixo).
 
 ### 1. Supabase
 
@@ -334,38 +336,41 @@ curl -X POST -H "x-cron-secret: <SEGREDO>" .../api/sync/disruptions
 
 A service role fica apenas no ambiente local que corre o ingest; nunca no browser nem no repositório.
 
-### 3. Cloudflare Pages
+### 3. GitHub Pages
 
-1. **Workers & Pages → Create → Pages → Connect to Git**.
-2. Repositório `london-subway`, branch `main`.
-3. Build command `npm run build`, output `apps/web/dist`, root `/`.
-4. Variável `NODE_VERSION=22.12.0` (ou o `.nvmrc`).
-5. Variáveis de build:
+O deploy é feito por GitHub Actions (`.github/workflows/deploy-pages.yml`) a cada push em `main`.
 
-```text
-VITE_API_BASE_URL=https://<PROJECT_REF>.supabase.co/functions/v1/api
-VITE_SUPABASE_URL=https://<PROJECT_REF>.supabase.co
-VITE_SUPABASE_ANON_KEY=<ANON_KEY>
-VITE_MAP_STYLE_URL=https://tiles.openfreemap.org/styles/dark
-```
+1. Em **Settings → Pages → Build and deployment**, escolhe **Source: GitHub Actions**.
+2. Faz push em `main` ou corre o workflow **Deploy (GitHub Pages)** manualmente.
+3. URL: `https://andreyMouraGouvea.github.io/london-subway/`.
 
-Deploy manual alternativo:
+O projeto é publicado num subpath, por isso o build recebe `VITE_BASE_PATH=/london-subway/`. O `vite.config.ts` usa essa variável como `base`, e o router deriva o `basename` de `import.meta.env.BASE_URL`.
+
+Limitações do GitHub Pages face ao Cloudflare Pages:
+
+- Não suporta headers HTTP personalizados; o CSP é aplicado por `<meta http-equiv="Content-Security-Policy">` em `apps/web/index.html`.
+- Não tem rewrites: o workflow copia `index.html` para `404.html` para os deep links da SPA.
+- Não tem preview deploys por branch.
+
+As variáveis `VITE_*` podem ser definidas como repository variables (`Settings → Secrets and variables → Actions → Variables`); o workflow tem os valores públicos atuais como fallback.
+
+#### Alternativa: Cloudflare Pages
 
 ```bash
 npm run build
 npx wrangler pages deploy apps/web/dist --project-name london-digital-twin
 ```
 
-Configuração em `wrangler.jsonc` e cabeçalhos em `apps/web/public/_headers`.
+Configuração em `wrangler.jsonc`, cabeçalhos em `apps/web/public/_headers` e rewrites em `_redirects`. Com Cloudflare não é preciso `VITE_BASE_PATH` (o site fica na raiz).
 
 ### 4. Auth e CORS
 
 No Supabase, em **Authentication → URL Configuration**:
 
-- Site URL: domínio do Pages.
-- Redirect URLs: o mesmo domínio (e `http://localhost:5173` para desenvolvimento local).
+- Site URL: `https://andreyMouraGouvea.github.io/london-subway/`.
+- Redirect URLs: `https://andreyMouraGouvea.github.io/**` e `http://localhost:5173`.
 
-`ALLOWED_ORIGINS` compara origens exatas: os previews do Pages mudam de URL a cada deploy. Usa um alias fixo por branch ou mantém os previews sem acesso à API.
+`ALLOWED_ORIGINS` compara origens exatas. Para GitHub Pages a origem é `https://andreyMouragouvea.github.io` (o caminho não conta). Previews do Cloudflare mudam de URL a cada deploy.
 
 ### 5. Supabase Cron
 

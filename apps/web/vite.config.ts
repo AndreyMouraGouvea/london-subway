@@ -8,8 +8,13 @@ import react from '@vitejs/plugin-react';
 // app_key da TfL continuam fora do prefixo e nunca chegam ao browser.
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
+// GitHub Pages serve o projeto num subpath (`/london-subway/`). Cloudflare
+// Pages e o dev usam a raiz. O valor entra por `VITE_BASE_PATH`.
+const basePath = process.env.VITE_BASE_PATH?.trim() || '/';
+
 export default defineConfig({
   envDir: repoRoot,
+  base: basePath,
   plugins: [react()],
   server: {
     port: 5173,

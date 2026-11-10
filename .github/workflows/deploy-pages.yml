@@ -1,0 +1,63 @@
+name: Deploy (GitHub Pages)
+
+# Publica o frontend em https://andreyMouraGouvea.github.io/london-subway/.
+# Requer em Settings → Pages → Build and deployment → Source: "GitHub Actions".
+#
+# As variáveis VITE_* são públicas (vão para o bundle). Podem ser substituídas
+# por repository variables com o mesmo nome, sem alterar este ficheiro.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        env:
+          VITE_BASE_PATH: /london-subway/
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || 'https://lgjwhvzejtcunhzsmalw.supabase.co/functions/v1/api' }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || 'https://lgjwhvzejtcunhzsmalw.supabase.co' }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnandodnplanRjdW5oenNtYWx3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQzMjI0NjIsImV4cCI6MjEwOTg5ODQ2Mn0.bPKDozOcHQ8DbIBIPbbJvzha45eHw1OytEloyQZn2jk' }}
+          VITE_MAP_STYLE_URL: https://tiles.openfreemap.org/styles/dark
+        run: npm run build
+
+      # GitHub Pages não tem rewrites: 404.html devolve o SPA para deep links.
+      - name: SPA fallback
+        run: cp apps/web/dist/index.html apps/web/dist/404.html
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -16,7 +16,7 @@ const LONDON_CENTER: [number, number] = [-0.1276, 51.5072];
 // MapLibre v6 carrega o worker num ficheiro separado. Servimos uma cópia
 // estática gerada por scripts/copy-maplibre-worker.mjs para evitar o wrapper
 // de worker do Vite, que falhava ao carregar em dev.
-const MAPLIBRE_WORKER_URL = '/maplibre-gl-worker.mjs';
+const MAPLIBRE_WORKER_URL = `${import.meta.env.BASE_URL}maplibre-gl-worker.mjs`;
 setWorkerUrl(MAPLIBRE_WORKER_URL);
 if (import.meta.env.DEV) console.info('[maplibre] worker URL', MAPLIBRE_WORKER_URL);
 
@@ -227,7 +227,7 @@ export function NetworkMap({
       if (!map.getSource('boroughs')) {
         map.addSource('boroughs', {
           type: 'geojson',
-          data: '/london-boroughs.geojson',
+          data: `${import.meta.env.BASE_URL}london-boroughs.geojson`,
         });
         map.addLayer({
           id: 'borough-fill',
