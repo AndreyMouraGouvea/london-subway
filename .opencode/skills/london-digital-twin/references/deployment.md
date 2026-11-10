@@ -24,8 +24,10 @@ Workers: the entrypoint is Deno/Hono with a Supabase client and shared
 ## GitHub Pages
 
 Deploy is handled by `.github/workflows/deploy-pages.yml` on every push to
-`main` (or `workflow_dispatch`). The repository must have **Settings → Pages →
-Source: GitHub Actions**.
+`main` (or `workflow_dispatch`). Pages is already enabled with
+**Settings → Pages → Source: GitHub Actions**; the workflow also passes
+`enablement: true` to `configure-pages`, which only helps sessions whose token
+has admin rights.
 
 - Node 22.12.0, `npm ci`, `npm run build`.
 - The site lives under `/london-subway/`, so the build sets
