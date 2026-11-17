@@ -516,6 +516,19 @@ See `references/phase-3-map.md` for concrete component and layer details.
 - Headless Edge renders the deployed SPA well enough to verify production:
   `msedge --headless=new --disable-gpu --virtual-time-budget=20000
   --screenshot=out.png <url>`. Use it to confirm the map, panels and data badges.
+- Overlays in a `flex-col` container must mark their children `shrink-0`. Flex
+  children default to `flex-shrink: 1`, so with a `max-height` on the aside and
+  `overflow-hidden` on the panel the content is compressed and clipped instead
+  of scrolling (`CcoPage` filter panel regression, 2026-11-17). Bound overlay
+  height with `top-3 bottom-3`, not `max-h-[calc(100dvh-88px)]`: the TopBar has a
+  second row on mobile and 88 px is only correct at `lg`+. Prefer
+  `.scrollbar-subtle` over `.no-scrollbar` on scrollable panels so users can see
+  there is more content.
+- Without Playwright/Puppeteer, measure layout via headless Edge CDP: start
+  `msedge --headless=new --remote-debugging-port=9222 --user-data-dir=<tmp>`,
+  then use `Runtime.evaluate` over `WebSocket` (Node 22 has a global) to read
+  `scrollHeight`/`clientHeight`/`getBoundingClientRect()` and prove that the last
+  child is reachable after `scrollTop = scrollHeight`.
 
 ## Definition of done for a phase
 
