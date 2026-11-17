@@ -180,7 +180,9 @@
 
   html,
   body,
-  #root {
+  #root,
+  #root > div,
+  main {
     height: auto !important;
     overflow: visible !important;
     background: #fff !important;
