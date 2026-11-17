@@ -95,7 +95,7 @@ export function TopBar() {
   }, []);
 
   return (
-    <header className="shrink-0 border-b border-white/10 bg-ink-950/85 backdrop-blur-xl">
+    <header className="no-print shrink-0 border-b border-white/10 bg-ink-950/85 backdrop-blur-xl">
       <div className="flex h-16 items-center justify-between gap-4 px-4 lg:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <div className="lg:hidden">
