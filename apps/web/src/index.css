@@ -114,6 +114,26 @@
     scrollbar-width: none;
   }
 
+  /* Scrollbar fina e visível: painéis com conteúdo maior que o ecrã precisam de
+     sinalizar que há mais conteúdo (o no-scrollbar esconde essa pista). */
+  .scrollbar-subtle {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.32) transparent;
+  }
+
+  .scrollbar-subtle::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .scrollbar-subtle::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.28);
+    border-radius: 9999px;
+  }
+
+  .scrollbar-subtle::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
   .map-fade {
     mask-image: linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%);
   }

@@ -253,10 +253,14 @@ export function CcoPage() {
       ) : null}
 
       <div className="pointer-events-none absolute inset-0">
+        {/* Altura derivada do contentor (top/bottom) em vez do viewport: o TopBar
+            muda de altura em mobile. Os filhos levam shrink-0 para o flex não os
+            comprimir — sem isso o overflow-hidden do painel corta o conteúdo e o
+            overflow-y-auto do aside nunca ativa. */}
         {filtersOpen ? (
-          <aside className="no-scrollbar pointer-events-auto absolute left-3 top-3 flex max-h-[calc(100dvh-88px)] w-[calc(100%-24px)] max-w-[350px] flex-col gap-3 overflow-y-auto pb-1">
-            <section className="panel overflow-hidden">
-              <div className="panel-header">
+          <aside className="scrollbar-subtle pointer-events-auto absolute left-3 top-3 bottom-3 flex w-[calc(100%-24px)] max-w-[350px] flex-col gap-3 overflow-y-auto pb-1">
+            <section className="panel shrink-0 overflow-hidden">
+              <div className="panel-header flex-wrap">
                 <div>
                   <p className="kicker">Rede metroferroviária</p>
                   <p className="mt-1 text-sm font-semibold text-slate-100">Resumo operacional</p>
@@ -481,7 +485,7 @@ export function CcoPage() {
               </div>
             </section>
 
-            <section className="panel px-3 py-2.5">
+            <section className="panel shrink-0 px-3 py-2.5">
               <div className="flex items-center gap-1.5">
                 <Activity className="h-3.5 w-3.5 text-accent" />
                 <span className="kicker">Fase 3 · mapa interativo</span>
@@ -497,7 +501,7 @@ export function CcoPage() {
 
         {/* Painel de detalhes */}
         <aside
-          className={`pointer-events-auto absolute inset-x-3 bottom-3 z-20 max-h-[58dvh] overflow-y-auto xl:inset-x-auto xl:right-3 xl:top-3 xl:bottom-auto xl:w-[400px] xl:max-h-[calc(100dvh-88px)] ${
+          className={`scrollbar-subtle pointer-events-auto absolute inset-x-3 bottom-3 z-20 max-h-[58dvh] overflow-y-auto xl:inset-x-auto xl:right-3 xl:top-3 xl:bottom-3 xl:w-[400px] xl:max-h-none ${
             selectedStationId || selectedLineIds.length > 0 ? 'block' : 'hidden xl:block'
           }`}
         >
