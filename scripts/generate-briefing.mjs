@@ -28,7 +28,7 @@ const DEFAULT_SUPABASE = 'https://lgjwhvzejtcunhzsmalw.supabase.co';
 // Chave anon pública (a mesma publicada no bundle). Não é um segredo.
 const DEFAULT_ANON_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnandodnplanRjdW5oenNtYWx3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQzMjI0NjIsImV4cCI6MjEwOTg5ODQ2Mn0.bPKDozOcHQ8DbIBIPbbJvzha45eHw1OytEloyQZn2jk';
-const TOTAL_SLIDES = 14;
+const TOTAL_SLIDES = 16;
 
 const COUNTS = {
   lines: ['lines'],
@@ -463,16 +463,17 @@ async function exportReport(reportUrl, pdfPath, previewPath) {
         client,
         `(() => {
           const root = document.querySelector('.print-report');
-          if (!root) return { ready: false, rows: 0 };
+          if (!root) return { ready: false, rows: 0, maps: 0 };
           const tables = root.querySelectorAll('table');
           const rows = tables[0]?.querySelectorAll('tbody tr').length ?? 0;
+          const maps = root.querySelectorAll('svg[data-report-map]').length;
           const text = root.textContent ?? '';
-          return { ready: rows >= 15 && !text.includes('aguarda sync'), rows };
+          return { ready: rows >= 15 && maps >= 7 && !text.includes('aguarda sync'), rows, maps };
         })()`,
       );
       if (state?.ready) {
         ready = true;
-        console.info(`  · /report pronto (${state.rows} linhas)`);
+        console.info(`  · /report pronto (${state.rows} linhas, ${state.maps} mapas)`);
         break;
       }
       await wait(1000);
@@ -584,6 +585,7 @@ function buildModel({
   annual,
   boardings,
   health,
+  networkMap,
   fontsCss,
 }) {
   const summary = status.data.summary;
@@ -663,6 +665,9 @@ function buildModel({
   const latestBoardings = boardings.data.lines.filter(
     (line) => line.latestYear === boardings.data.latestYear,
   );
+  const sortedBoardings = latestBoardings
+    .slice()
+    .sort((left, right) => (right.latestBoardings ?? 0) - (left.latestBoardings ?? 0));
   const totalLatest = latestBoardings.reduce(
     (total, line) => total + (line.latestBoardings ?? 0),
     0,
@@ -689,6 +694,11 @@ function buildModel({
     network: {
       summary,
       lines: lineList,
+    },
+    mapData: {
+      lines: networkMap.data.lines,
+      stations: networkMap.data.stations,
+      paths: networkMap.data.paths,
     },
     lineModes,
     lineStatusById,
@@ -725,10 +735,14 @@ function buildModel({
     annual: annual.data,
     boardings: {
       years: boardings.data.years,
-      top: latestBoardings
-        .slice()
-        .sort((left, right) => (right.latestBoardings ?? 0) - (left.latestBoardings ?? 0))
-        .slice(0, 5),
+      latestYear: boardings.data.latestYear,
+      top: sortedBoardings.slice(0, 5),
+      main: sortedBoardings.slice(0, 6).map((line) => ({
+        lineId: line.lineId,
+        lineName: line.lineName,
+        latestYear: line.latestYear,
+        latestBoardings: line.latestBoardings,
+      })),
       totalLatest,
       linesCount: latestBoardings.length,
     },
@@ -772,6 +786,7 @@ async function generateDeck() {
     annual,
     boardings,
     health,
+    networkMap,
   ] = await Promise.all([
     loadFontsCss(),
     loadCounts(),
@@ -785,6 +800,7 @@ async function generateDeck() {
     api('/analytics/annual/summary?limit=8'),
     api('/analytics/boardings'),
     api('/data-health'),
+    api('/network'),
   ]);
 
   const generatedAt = new Date();
@@ -801,6 +817,7 @@ async function generateDeck() {
     annual,
     boardings,
     health,
+    networkMap,
     fontsCss,
   });
 

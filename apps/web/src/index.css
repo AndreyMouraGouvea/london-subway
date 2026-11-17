@@ -219,6 +219,17 @@
     color: #4b5563 !important;
   }
 
+  .print-report .map-block,
+  .print-report .map-figure {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-report svg {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
   .print-report table {
     page-break-inside: auto;
   }

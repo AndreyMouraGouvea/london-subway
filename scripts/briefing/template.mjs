@@ -57,6 +57,186 @@ const licenceLabel = (value) => {
   return LICENCE_LABELS[key] ?? key;
 };
 
+const MAP_PAPER = '#F7F9FC';
+const MAP_CONTEXT = '#D5DCE5';
+const MAP_FALLBACK = '#7A879C';
+
+function mercatorY(lat) {
+  const radians = (lat * Math.PI) / 180;
+  return Math.log(Math.tan(Math.PI / 4 + radians / 2));
+}
+
+function geometrySegments(geometry) {
+  return geometry.type === 'LineString' ? [geometry.coordinates] : geometry.coordinates;
+}
+
+/**
+ * Desenha a rede (ou uma linha) como SVG vetorial. Sem tiles e sem MapLibre:
+ * o resultado imprime bem e não depende de rede no momento da impressão.
+ */
+function renderMap(
+  model,
+  {
+    focusLineId = null,
+    width = 1000,
+    height = 820,
+    labelCount = 6,
+    labelSize = 16,
+    contextWidth = 2.4,
+    focusWidth = 4,
+    stationRadius = 4,
+    interchangeRadius = 6,
+  } = {},
+) {
+  const { paths, stations, lines } = model.mapData;
+  const colorById = new Map(lines.map((line) => [line.id, line.colorHex ?? MAP_FALLBACK]));
+  const focusPaths = focusLineId ? paths.filter((path) => path.lineId === focusLineId) : paths;
+  const boundsPaths = focusPaths.length > 0 ? focusPaths : paths;
+
+  let minX = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  const projected = new Map();
+
+  for (const path of boundsPaths) {
+    const segments = [];
+    for (const segment of geometrySegments(path.geometry)) {
+      const points = [];
+      for (const point of segment) {
+        const lon = point[0];
+        const lat = point[1];
+        if (typeof lon !== 'number' || typeof lat !== 'number') continue;
+        if (!Number.isFinite(lon) || !Number.isFinite(lat)) continue;
+        const x = (lon * Math.PI) / 180;
+        const y = mercatorY(lat);
+        points.push([x, y]);
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+      if (points.length > 1) segments.push(points);
+    }
+    projected.set(`${path.lineId}|${path.direction}|${path.branchId}`, segments);
+  }
+
+  if (!Number.isFinite(minX) || !Number.isFinite(minY)) {
+    minX = 0;
+    maxX = 1;
+    minY = 0;
+    maxY = 1;
+  }
+
+  const padding = width * 0.025;
+  const spanX = maxX - minX || 1e-9;
+  const spanY = maxY - minY || 1e-9;
+  const scale = Math.min((width - padding * 2) / spanX, (height - padding * 2) / spanY);
+  const offsetX = (width - spanX * scale) / 2 - minX * scale;
+  const offsetY = (height - spanY * scale) / 2 + maxY * scale;
+  const project = (lon, lat) => [
+    ((lon * Math.PI) / 180) * scale + offsetX,
+    offsetY - mercatorY(lat) * scale,
+  ];
+
+  const pathMarkup = [];
+  for (const path of paths) {
+    const segments = projected.get(`${path.lineId}|${path.direction}|${path.branchId}`);
+    if (!segments) continue;
+    let lastX = Number.POSITIVE_INFINITY;
+    let lastY = Number.POSITIVE_INFINITY;
+    const parts = [];
+    for (const segment of segments) {
+      segment.forEach((point, index) => {
+        const x = point[0];
+        const y = point[1];
+        if (x === undefined || y === undefined) return;
+        const px = x * scale + offsetX;
+        const py = offsetY - y * scale;
+        if (index > 0 && Math.abs(px - lastX) + Math.abs(py - lastY) < 0.6) return;
+        parts.push(
+          `${parts.length === 0 || index === 0 ? 'M' : 'L'}${px.toFixed(1)} ${py.toFixed(1)}`,
+        );
+        lastX = px;
+        lastY = py;
+      });
+    }
+    if (parts.length === 0) continue;
+    const focused = Boolean(focusLineId && path.lineId === focusLineId);
+    pathMarkup.push(
+      `<path d="${parts.join(' ')}" fill="none" stroke="${
+        focused
+          ? (colorById.get(path.lineId) ?? MAP_FALLBACK)
+          : focusLineId
+            ? MAP_CONTEXT
+            : (colorById.get(path.lineId) ?? MAP_FALLBACK)
+      }" stroke-width="${focused ? focusWidth : contextWidth}" stroke-linecap="round" stroke-linejoin="round" opacity="${
+        focused ? 1 : focusLineId ? 0.75 : 0.9
+      }" />`,
+    );
+  }
+
+  const focusStations = focusLineId
+    ? stations.filter((station) => station.lineIds.includes(focusLineId))
+    : stations;
+  const stationMarkup = focusStations.map((station) => {
+    const [x, y] = project(station.lon, station.lat);
+    const interchange = station.lineIds.length > 1;
+    const radius = focusLineId
+      ? interchange
+        ? stationRadius * 1.25
+        : stationRadius
+      : interchange
+        ? interchangeRadius * 0.65
+        : interchangeRadius * 0.45;
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius.toFixed(1)}" fill="${
+      focusLineId ? '#14202E' : '#FFFFFF'
+    }" stroke="${focusLineId ? '#FFFFFF' : '#8A99AB'}" stroke-width="${focusLineId ? 1.6 : 1}" />`;
+  });
+
+  const candidates = [...focusStations]
+    .filter((station) => !focusLineId || station.lineIds.length > 1)
+    .sort(
+      (left, right) =>
+        right.lineIds.length - left.lineIds.length || left.name.localeCompare(right.name),
+    );
+  const placed = [];
+  const anchors = [];
+  const labels = [];
+  for (const station of candidates) {
+    if (labels.length >= labelCount) break;
+    const [x, y] = project(station.lon, station.lat);
+    if (x < 8 || x > width - 8 || y < labelSize || y > height - 8) continue;
+    if (anchors.some((anchor) => Math.hypot(anchor.x - x, anchor.y - y) < labelSize * 4)) continue;
+    const boxWidth = station.name.length * labelSize * 0.54 + 6;
+    for (const anchor of ['start', 'end']) {
+      const left = anchor === 'start' ? x + 6 : x - 6 - boxWidth;
+      const box = { x1: left, y1: y - labelSize, x2: left + boxWidth, y2: y + 4 };
+      if (box.x1 < 2 || box.x2 > width - 2) continue;
+      const overlap = placed.some(
+        (item) => box.x1 < item.x2 && box.x2 > item.x1 && box.y1 < item.y2 && box.y2 > item.y1,
+      );
+      if (overlap) continue;
+      placed.push(box);
+      anchors.push({ x, y });
+      labels.push(
+        `<text x="${(x + (anchor === 'start' ? 6 : -6)).toFixed(1)}" y="${(y + labelSize * 0.3).toFixed(1)}" text-anchor="${anchor}" font-size="${labelSize}" fill="#243447" paint-order="stroke" stroke="${MAP_PAPER}" stroke-width="${Math.max(3, labelSize * 0.22)}" stroke-linejoin="round">${esc(
+          station.name,
+        )}</text>`,
+      );
+      break;
+    }
+  }
+
+  return `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${
+    focusLineId
+      ? `Mapa da linha ${esc(model.lineNameById.get(focusLineId) ?? focusLineId)}`
+      : 'Mapa da rede'
+  }"><rect width="${width}" height="${height}" fill="${MAP_PAPER}" /><g>${pathMarkup.join('')}</g><g>${stationMarkup.join(
+    '',
+  )}</g><g font-family="Inter, Segoe UI, sans-serif">${labels.join('')}</g></svg>`;
+}
+
 const ESCAPES = {
   '&': '&amp;',
   '<': '&lt;',
@@ -305,6 +485,83 @@ function networkSlide(model) {
   });
 }
 
+function networkMapSlide(model) {
+  const legend = model.mapData.lines
+    .map(
+      (line) =>
+        `<li><span class="dot" style="background:${esc(line.colorHex ?? MAP_FALLBACK)}"></span>${esc(line.name)}</li>`,
+    )
+    .join('');
+  const body = `
+    <div class="map-layout">
+      <div class="map-frame">
+        ${renderMap(model, { width: 1000, height: 820, labelCount: 0 })}
+      </div>
+      <div>
+        <h3 class="block-title">Lines (${int(model.mapData.lines.length)})</h3>
+        <ul class="map-legend">${legend}</ul>
+        <div class="callout" style="margin-top:4mm">
+          Vector geometry from the stored TfL line paths; stations are canonical NaPTAN points.
+          Labels are omitted at this scale for legibility — major hubs are named on the resilience
+          slide.
+        </div>
+      </div>
+    </div>`;
+  return slideShell({
+    section: '04 · Network map',
+    title: 'The network as stored',
+    lede: 'Every line geometry and station in the dataset, drawn from the same API response that feeds the CCO.',
+    body,
+    page: 4,
+    total: model.totalSlides,
+    generatedStamp: model.generatedStamp,
+  });
+}
+
+function principalLinesSlide(model) {
+  const cards = model.boardings.main
+    .map((row) => {
+      const line = model.mapData.lines.find((item) => item.id === row.lineId);
+      if (!line) return '';
+      return `<figure class="mini-map">
+        <div class="mini-canvas">
+          ${renderMap(model, {
+            focusLineId: line.id,
+            width: 640,
+            height: 480,
+            labelCount: 1,
+            labelSize: 30,
+            contextWidth: 4,
+            focusWidth: 7,
+            stationRadius: 5,
+            interchangeRadius: 8,
+          })}
+        </div>
+        <figcaption>
+          <span class="dot" style="background:${esc(line.colorHex ?? MAP_FALLBACK)}"></span>
+          <span class="mini-name">${esc(line.name)}</span>
+          <span class="mini-meta">${int(line.stationCount)} stations · ${compact(row.latestBoardings)} boardings</span>
+        </figcaption>
+      </figure>`;
+    })
+    .join('');
+  const body = `
+    <div class="mini-grid">${cards}</div>
+    <p class="table-note">
+      The six lines with the highest ${model.boardings.latestYear ?? '—'} boardings. The rest of the
+      network remains in light grey for geographic context.
+    </p>`;
+  return slideShell({
+    section: '05 · Principal lines',
+    title: 'Where demand concentrates',
+    lede: 'One map per principal line, ranked by annual boardings and drawn against the full network.',
+    body,
+    page: 5,
+    total: model.totalSlides,
+    generatedStamp: model.generatedStamp,
+  });
+}
+
 function liveOperations(model) {
   const summary = model.network.summary;
   const fresh = model.freshness;
@@ -358,11 +615,11 @@ function liveOperations(model) {
       </div>
     </div>`;
   return slideShell({
-    section: '04 · Live operations',
+    section: '06 · Live operations',
     title: 'Operating state at generation time',
     lede: 'Line status and disruption counts are a point-in-time snapshot; the age of that snapshot is shown explicitly.',
     body,
-    page: 4,
+    page: 6,
     total: model.totalSlides,
     generatedStamp: model.generatedStamp,
   });
@@ -393,11 +650,11 @@ function lineTable(model) {
       unique count — interchanges appear under more than one line.
     </p>`;
   return slideShell({
-    section: '05 · Line status',
+    section: '07 · Line status',
     title: 'Line-by-line status',
     lede: 'All 20 lines, with the status band and alert count recorded in the current snapshot.',
     body,
-    page: 5,
+    page: 7,
     total: model.totalSlides,
     generatedStamp: model.generatedStamp,
   });
@@ -437,11 +694,11 @@ function disruptions(model) {
       collapsed, and descriptions are truncated for layout.
     </p>`;
   return slideShell({
-    section: '06 · Disruptions',
+    section: '08 · Disruptions',
     title: 'Active disruptions',
     lede: 'What is currently interrupting service, ordered by severity and then by recency.',
     body,
-    page: 6,
+    page: 8,
     total: model.totalSlides,
     generatedStamp: model.generatedStamp,
   });
@@ -502,11 +759,11 @@ function history(model) {
       </div>
     </div>`;
   return slideShell({
-    section: '07 · History',
+    section: '09 · History',
     title: 'The last 24 hours',
     lede: 'Hourly aggregation of every captured status snapshot, with the disruption rate per line.',
     body,
-    page: 7,
+    page: 9,
     total: model.totalSlides,
     generatedStamp: model.generatedStamp,
   });
@@ -570,11 +827,11 @@ function mobility(model) {
       </div>
     </div>`;
   return slideShell({
-    section: '08 · Mobility',
+    section: '10 · Mobility',
     title: 'Footfall and annual demand',
     lede: 'Two published datasets describe how the network is used; both are historical and carry an explicit vintage.',
     body,
-    page: 8,
+    page: 10,
     total: model.totalSlides,
     generatedStamp: model.generatedStamp,
   });
@@ -651,11 +908,11 @@ function capacity(model) {
       </div>
     </div>`;
   return slideShell({
-    section: '09 · Capacity and demand',
+    section: '11 · Capacity and demand',
     title: 'Capacity, loadings and boardings',
     lede: 'What the platform stores about demand and crowding, with the vintage of each source stated explicitly.',
     body,
-    page: 9,
+    page: 11,
     total: model.totalSlides,
     generatedStamp: model.generatedStamp,
   });
@@ -722,11 +979,11 @@ function topology(model) {
       stations have a confirmed step-free value. The model must not infer step-free access from lifts.
     </div>`;
   return slideShell({
-    section: '10 · Resilience',
+    section: '12 · Resilience',
     title: 'Topology and single points of failure',
     lede: 'Graph measurements computed from the stored network, not from a routing engine.',
     body,
-    page: 10,
+    page: 12,
     total: model.totalSlides,
     generatedStamp: model.generatedStamp,
   });
@@ -788,11 +1045,11 @@ function health(model) {
       </div>
     </div>`;
   return slideShell({
-    section: '11 · Data health',
+    section: '13 · Data health',
     title: 'Sources, jobs and retention',
     lede: 'Operational evidence that the data keeps arriving, and what happens when it does not.',
     body,
-    page: 11,
+    page: 13,
     total: model.totalSlides,
     generatedStamp: model.generatedStamp,
   });
@@ -848,11 +1105,11 @@ function architecture(model) {
       Source: repository configuration, migrations and production responses sampled for this report.
     </p>`;
   return slideShell({
-    section: '12 · Architecture',
+    section: '14 · Architecture',
     title: 'How the platform is assembled',
     lede: 'A compact view of the stack, the deployment boundaries and the automation that keeps data moving.',
     body,
-    page: 12,
+    page: 14,
     total: model.totalSlides,
     generatedStamp: model.generatedStamp,
   });
@@ -884,11 +1141,11 @@ function findings(model) {
       as such; they are not inferred from API responses.
     </p>`;
   return slideShell({
-    section: '13 · Findings',
+    section: '15 · Findings',
     title: 'Audit findings',
     lede: 'Three strengths, three risks and three actions, each tied to the evidence that produced it.',
     body,
-    page: 13,
+    page: 15,
     total: model.totalSlides,
     generatedStamp: model.generatedStamp,
   });
@@ -935,11 +1192,11 @@ function sources(model) {
       </div>
     </div>`;
   return slideShell({
-    section: '14 · Sources',
+    section: '16 · Sources',
     title: 'Sources, licences and disclaimer',
     lede: 'Every dataset used in this report, its publisher and the licence it is published under.',
     body,
-    page: 14,
+    page: 16,
     total: model.totalSlides,
     generatedStamp: model.generatedStamp,
   });
@@ -1182,6 +1439,59 @@ const CSS = `
   .cols-capacity { grid-template-columns: 1.45fr 1fr; }
   .cols-health { grid-template-columns: 1.35fr 1fr; }
 
+  /* Maps */
+  .map-layout {
+    display: grid;
+    grid-template-columns: 150mm 1fr;
+    gap: 6mm;
+    align-items: start;
+  }
+  .map-frame {
+    border: 0.2mm solid var(--rule);
+    background: #fff;
+    padding: 2mm;
+  }
+  .map-frame svg { display: block; width: 100%; height: 112mm; }
+  .map-legend {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1.1mm;
+    font-size: 7pt;
+    color: #243447;
+  }
+  .map-legend li { display: flex; align-items: center; }
+
+  .mini-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4mm;
+  }
+  .mini-map {
+    margin: 0;
+    border: 0.2mm solid var(--rule);
+    background: #fff;
+    break-inside: avoid;
+  }
+  .mini-canvas { padding: 1.5mm; }
+  .mini-canvas svg { display: block; width: 100%; height: 39mm; }
+  .mini-map figcaption {
+    display: flex;
+    align-items: center;
+    gap: 1.4mm;
+    padding: 1.8mm 2.2mm;
+    border-top: 0.2mm solid var(--rule);
+    font-size: 7pt;
+  }
+  .mini-name { font-weight: 600; }
+  .mini-meta {
+    margin-left: auto;
+    font-size: 5.9pt;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
   .card {
     border: 0.2mm solid var(--rule);
     padding: 4mm;
@@ -1306,6 +1616,8 @@ export function renderDeck(model) {
     cover(model),
     scope(model),
     networkSlide(model),
+    networkMapSlide(model),
+    principalLinesSlide(model),
     liveOperations(model),
     lineTable(model),
     disruptions(model),

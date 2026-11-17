@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Printer } from 'lucide-react';
 import {
@@ -6,6 +7,7 @@ import {
   STATUS_BAND_LABELS,
   formatLondonDateTime,
   formatLondonTime,
+  type LineSummary,
 } from '@ldt/shared';
 import { Badge } from '../../components/ui/Badge';
 import { DataStateBadge } from '../../components/ui/DataStateBadge';
@@ -14,8 +16,16 @@ import {
   useDashboardSummary,
   useDataHealth,
   useDisruptions,
+  useLineBoardings,
   useLines,
+  useNetwork,
 } from '../../hooks/useOperations';
+import { NetworkMapSvg } from './NetworkMapSvg';
+
+const compactNumber = new Intl.NumberFormat('pt-PT', {
+  notation: 'compact',
+  maximumFractionDigits: 1,
+});
 
 export function ReportPage() {
   const dashboard = useDashboardSummary();
@@ -23,6 +33,8 @@ export function ReportPage() {
   const health = useDataHealth();
   const lines = useLines();
   const disruptions = useDisruptions();
+  const network = useNetwork();
+  const boardings = useLineBoardings();
 
   const summary = dashboard.data?.data?.summary ?? null;
   const meta = dashboard.data?.meta ?? null;
@@ -30,7 +42,24 @@ export function ReportPage() {
   const alerts = (disruptions.data?.data ?? []).slice(0, 12);
   const dataHealth = health.data?.data ?? null;
   const historySeries = (history.data?.data?.series ?? []).slice(-8).reverse();
+  const networkData = network.data?.data ?? null;
+  const boardingsData = boardings.data?.data ?? null;
   const generatedAt = new Date();
+
+  const mainLines = useMemo(() => {
+    if (!networkData || !boardingsData) {
+      return [] as Array<{ line: LineSummary; boardings: number }>;
+    }
+    const lineById = new Map(networkData.lines.map((line) => [line.id, line]));
+    return boardingsData.lines
+      .filter((row) => row.latestYear === boardingsData.latestYear && row.lineId)
+      .sort((left, right) => (right.latestBoardings ?? 0) - (left.latestBoardings ?? 0))
+      .slice(0, 6)
+      .flatMap((row) => {
+        const line = row.lineId ? lineById.get(row.lineId) : undefined;
+        return line ? [{ line, boardings: row.latestBoardings ?? 0 }] : [];
+      });
+  }, [networkData, boardingsData]);
 
   return (
     <div className="h-full overflow-y-auto print:overflow-visible">
@@ -95,6 +124,77 @@ export function ReportPage() {
             ))}
           </div>
         </section>
+
+        {networkData ? (
+          <>
+            <section className="map-block">
+              <h2 className="text-sm font-semibold text-slate-100">Mapa da rede</h2>
+              <div className="mx-auto mt-2 max-w-[640px] overflow-hidden rounded-xl border border-white/10 bg-white">
+                <NetworkMapSvg
+                  data={networkData}
+                  labelCount={4}
+                  viewBoxWidth={1000}
+                  viewBoxHeight={820}
+                  className="h-[460px] w-full"
+                />
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-[0.625rem] sm:grid-cols-3">
+                {networkData.lines.map((line) => (
+                  <span key={line.id} className="inline-flex items-center gap-1.5 text-slate-400">
+                    <span
+                      className="h-2 w-2 rounded-full"
+                      style={{
+                        backgroundColor:
+                          line.colorHex ?? LINE_BRANDING_BY_ID[line.id]?.colorHex ?? '#7A879C',
+                      }}
+                    />
+                    {line.name}
+                  </span>
+                ))}
+              </div>
+            </section>
+
+            <section className="map-block">
+              <h2 className="text-sm font-semibold text-slate-100">Principais linhas</h2>
+              <p className="mt-1 text-xs text-slate-500">
+                As seis linhas com mais boardings em {boardingsData?.latestYear ?? '—'}.
+              </p>
+              <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                {mainLines.map(({ line, boardings }) => (
+                  <figure
+                    key={line.id}
+                    className="map-figure overflow-hidden rounded-xl border border-white/10 bg-white"
+                  >
+                    <NetworkMapSvg
+                      data={networkData}
+                      focusLineId={line.id}
+                      labelCount={1}
+                      viewBoxWidth={800}
+                      viewBoxHeight={620}
+                      className="h-[240px] w-full"
+                    />
+                    <figcaption className="flex flex-wrap items-center justify-between gap-1 px-3 py-2">
+                      <span className="inline-flex items-center gap-1.5 text-[0.6875rem] text-slate-700">
+                        <span
+                          className="h-2 w-2 rounded-full"
+                          style={{
+                            backgroundColor:
+                              line.colorHex ?? LINE_BRANDING_BY_ID[line.id]?.colorHex ?? '#7A879C',
+                          }}
+                        />
+                        {line.name}
+                      </span>
+                      <span className="font-mono text-[0.5625rem] uppercase tracking-[0.08em] text-slate-500">
+                        {line.stationCount ?? '—'} estações · {compactNumber.format(boardings)}{' '}
+                        boardings
+                      </span>
+                    </figcaption>
+                  </figure>
+                ))}
+              </div>
+            </section>
+          </>
+        ) : null}
 
         <section>
           <h2 className="text-sm font-semibold text-slate-100">Estado por linha</h2>

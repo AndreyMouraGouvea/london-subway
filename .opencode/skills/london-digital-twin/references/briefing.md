@@ -7,7 +7,7 @@ Client-facing deck for the London Digital Twin, branded
 ## Outputs
 
 ```text
-docs/briefing/vidreys-report_london-digital-twin_YYYY-MM-DD.pdf              14 slides, A4 landscape
+docs/briefing/vidreys-report_london-digital-twin_YYYY-MM-DD.pdf              16 slides, A4 landscape
 docs/briefing/vidreys-report_london-digital-twin-operational_YYYY-MM-DD.pdf  /report export, A4 portrait
 ```
 
@@ -89,20 +89,39 @@ sponsored by Transport for London.”
 1. Cover
 2. Scope and method
 3. Network at a glance
-4. Live operations
-5. Line-by-line status
-6. Active disruptions
-7. Last 24 hours
-8. Footfall and annual demand
-9. Capacity, loadings and boardings
-10. Topology and single points of failure
-11. Sources, jobs and retention
-12. Architecture
-13. Audit findings
-14. Sources, licences and disclaimer
+4. Network map — full network as vector SVG, with a 20-line legend
+5. Principal lines — six mini maps, ranked by 2025 boardings
+6. Live operations
+7. Line-by-line status
+8. Active disruptions
+9. Last 24 hours
+10. Footfall and annual demand
+11. Capacity, loadings and boardings
+12. Topology and single points of failure
+13. Sources, jobs and retention
+14. Architecture
+15. Audit findings
+16. Sources, licences and disclaimer
 
 Adding or removing a slide requires updating `TOTAL_SLIDES` in
 `scripts/generate-briefing.mjs`; the generator asserts the PDF page count.
+
+## Maps
+
+Maps are generated as inline SVG from `/network` (paths + stations). There is no
+MapLibre, no tiles and no network dependency at print time, so they stay sharp in
+the PDF.
+
+- Projection: Web Mercator, bounds fitted per map with uniform scale.
+- Network map: all paths in official colours, no station labels (the centre is
+  too dense); the legend carries the 20 names.
+- Line maps: the full network in light grey, the focus line in its colour, one
+  interchange label, and the line's station count and boardings.
+- The `/report` uses the same logic in
+  `apps/web/src/features/report/NetworkMapSvg.tsx`; the generator has the
+  equivalent `renderMap()` in `scripts/briefing/template.mjs`.
+
+The `/report` export waits for 20 status rows **and** 7 map SVGs before printing.
 
 ## Pitfalls
 

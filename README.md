@@ -185,7 +185,7 @@ npm run ingest:all       # footfall + annual + NUMBAT + crowding + RODS
   ```
 - `/admin` é read-only (fontes, jobs e retenção) e só abre para `is_admin = true`.
 - As notificações do browser funcionam apenas com a aplicação aberta; não há serviço de push.
-- `/report` gera um relatório imprimível; use “Imprimir / Guardar PDF” para PDF.
+- `/report` gera um relatório imprimível; use “Imprimir / Guardar PDF” para PDF. Inclui mapa vetorial da rede e mapas das seis linhas com mais boardings.
 
 ## Briefing em PDF — Vidrey's Report
 
@@ -197,7 +197,7 @@ npm run briefing -- --verify     # audita overflow por slide e guarda screenshot
 
 Gera em `docs/briefing/`:
 
-- `vidreys-report_london-digital-twin_<data>.pdf` — 14 slides A4 landscape, marca “Vidrey's Report — Independent Audit for Brands”.
+- `vidreys-report_london-digital-twin_<data>.pdf` — 16 slides A4 landscape, marca “Vidrey's Report — Independent Audit for Brands”, com mapa da rede e mapas das seis principais linhas.
 - `vidreys-report_london-digital-twin-operational_<data>.pdf` — export do `/report` com a linha de marca só visível na impressão.
 
 As contagens de linhas são lidas com a chave anon pública e RLS (`Prefer: count=exact`); não é necessário `service_role`. Requer Edge ou Chrome (`EDGE_PATH` se não estiver no caminho padrão). O HTML intermédio e as fontes ficam em `%TEMP%`, não no repositório. Detalhes: `.opencode/skills/london-digital-twin/references/briefing.md`.
