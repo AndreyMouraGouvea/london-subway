@@ -117,6 +117,8 @@ the PDF.
   too dense); the legend carries the 20 names.
 - Line maps: the full network in light grey, the focus line in its colour, one
   interchange label, and the line's station count and boardings.
+- The `/report` network map labels four hubs; the deck map labels none at that
+  scale. Both use a minimum anchor distance to avoid overlapping labels.
 - The `/report` uses the same logic in
   `apps/web/src/features/report/NetworkMapSvg.tsx`; the generator has the
   equivalent `renderMap()` in `scripts/briefing/template.mjs`.
@@ -129,9 +131,12 @@ The `/report` export waits for 20 status rows **and** 7 map SVGs before printing
   `ReportPage.tsx`, which is `hidden print:block`. Generate it only **after** the
   Pages deploy that contains it.
 - `/report` is a GitHub Pages deep link: it returns HTTP 404 with the SPA HTML
-  and still renders. Wait for the **first** table (Estado por linha) to reach 15
-  rows before printing; a total row count can pass while the lines table is still
-  empty, producing a report without line status.
+  and still renders. Wait for the **first** table (Estado por linha) to reach 20
+  rows **and** for 7 `svg[data-report-map]` nodes before printing; a total row
+  count can pass while the lines table or the maps are still empty.
+- GitHub Pages caches `index.html` for ~10 minutes. A report export started right
+  after a deploy can load the previous bundle (seen with the map label count);
+  check the published bundle hash or wait before regenerating the PDF.
 - Source status values are snake_case (`not_synced`); map them for display.
 - Disruption records contain duplicates of the same alert; the deck collapses
   them by line + band + description and says so in the table note.

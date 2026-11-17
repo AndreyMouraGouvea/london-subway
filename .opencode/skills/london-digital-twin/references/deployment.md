@@ -38,6 +38,16 @@ Workers: the entrypoint is Deno/Hono with a Supabase client and shared
 - Two CORS defects were found and fixed in production: the allowlist must use a
   lowercase host, and the router now compares origins case-insensitively.
 
+### Updates after 2026-11-10
+
+- **2026-11-17:** CCO filter panel now scrolls instead of clipping (flex children
+  need `shrink-0`; overlays bound with `top/bottom`, not `max-h` of the viewport).
+- **2026-11-17:** the printed `/report` is forced to a white background and keeps
+  its own header (TopBar is `.no-print`).
+- **2026-11-17:** Vidrey's Report briefing (`npm run briefing`) — 16-slide deck
+  and a 5-page operational PDF, both with inline SVG maps. See `briefing.md`.
+- CI #20 and Deploy #15 were green at the end of the session.
+
 ## Deploying
 
 ```bash

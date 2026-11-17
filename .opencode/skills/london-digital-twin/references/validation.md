@@ -190,8 +190,9 @@ Expected:
 5. RLS probes with anon: `profiles`, `user_favorites` and
    `user_alert_subscriptions` return `200 []` (RLS filters all rows), not `401`.
    Unauthenticated writes are rejected. An authenticated user sees only own rows.
-6. `/report` renders and `Page.printToPDF` creates a non-empty PDF (~158 KB in the
-   local run).
+6. `/report` renders and `Page.printToPDF` creates a non-empty PDF with 20 line
+   rows and 7 map SVGs (1 network + 6 principal lines); the export is ~482 KB and
+   5 pages in the validated run.
 7. CCO “Boroughs (ONS)” toggles the layer; source has 33 features,
    `queryRenderedFeatures` returns boundary features and ONS attribution is
    visible.
