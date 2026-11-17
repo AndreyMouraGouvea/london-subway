@@ -187,6 +187,21 @@ npm run ingest:all       # footfall + annual + NUMBAT + crowding + RODS
 - As notificações do browser funcionam apenas com a aplicação aberta; não há serviço de push.
 - `/report` gera um relatório imprimível; use “Imprimir / Guardar PDF” para PDF.
 
+## Briefing em PDF — Vidrey's Report
+
+```bash
+npm run briefing                 # deck + export do /report
+npm run briefing -- --deck-only  # só o deck
+npm run briefing -- --verify     # audita overflow por slide e guarda screenshots
+```
+
+Gera em `docs/briefing/`:
+
+- `vidreys-report_london-digital-twin_<data>.pdf` — 14 slides A4 landscape, marca “Vidrey's Report — Independent Audit for Brands”.
+- `vidreys-report_london-digital-twin-operational_<data>.pdf` — export do `/report` com a linha de marca só visível na impressão.
+
+As contagens de linhas são lidas com a chave anon pública e RLS (`Prefer: count=exact`); não é necessário `service_role`. Requer Edge ou Chrome (`EDGE_PATH` se não estiver no caminho padrão). O HTML intermédio e as fontes ficam em `%TEMP%`, não no repositório. Detalhes: `.opencode/skills/london-digital-twin/references/briefing.md`.
+
 ## Qualidade
 
 ```bash

@@ -32,7 +32,8 @@
     "ingest:numbat": "npm run numbat -w @ldt/ingest",
     "ingest:crowding": "npm run crowding -w @ldt/ingest",
     "ingest:rods": "npm run rods -w @ldt/ingest",
-    "ingest:all": "npm run ingest:all -w @ldt/ingest"
+    "ingest:all": "npm run ingest:all -w @ldt/ingest",
+    "briefing": "node scripts/generate-briefing.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",

@@ -48,6 +48,8 @@ never calls TfL directly.
 10. `references/validation.md` — commands and checks.
 11. `references/deployment.md` — production topology, GitHub Pages workflow,
     Supabase Cron, credential hygiene and validated production counts.
+12. `references/briefing.md` — Vidrey's Report deck: brand tokens, generator,
+    data collection and verification.
 
 ## Non-negotiable data rules
 
@@ -157,6 +159,8 @@ Or run `scripts/sync-local.ps1`.
   the UI by design; the refresh button only invalidates queries.
 - Production credentials stay out of the repo. The Supabase access token and the
   database password were shared in chat during setup and still need rotating.
+- Client-facing briefing: `npm run briefing` builds the Vidrey's Report deck and
+  exports `/report`. See `references/briefing.md`.
 
 ## Current data shape (Phase 2 validated)
 

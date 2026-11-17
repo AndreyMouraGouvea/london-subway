@@ -35,6 +35,14 @@ export function ReportPage() {
   return (
     <div className="h-full overflow-y-auto print:overflow-visible">
       <div className="print-report mx-auto max-w-[1000px] space-y-5 p-4 lg:p-6">
+        <div className="hidden border-b border-slate-300 pb-3 print:block">
+          <p className="font-mono text-[0.6875rem] font-semibold uppercase tracking-[0.3em] text-slate-900">
+            Vidrey&apos;s Report
+          </p>
+          <p className="mt-1 font-mono text-[0.5625rem] uppercase tracking-[0.18em] text-slate-500">
+            Independent Audit for Brands
+          </p>
+        </div>
         <div className="no-print flex flex-wrap items-center justify-between gap-3">
           <Link to="/dashboard" className="text-xs text-accent hover:underline">
             ← Voltar ao dashboard
@@ -239,6 +247,10 @@ export function ReportPage() {
           Dados históricos, derivados e de estado reportado; não há garantias de tempo real fora dos
           timestamps indicados.
         </footer>
+        <p className="hidden border-t border-white/10 pt-3 text-[0.625rem] text-slate-500 print:block">
+          Preparado por Vidrey&apos;s Report — Independent Audit for Brands. Relatório independente,
+          não afiliado, endossado ou patrocinado pela Transport for London.
+        </p>
       </div>
     </div>
   );
