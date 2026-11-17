@@ -464,9 +464,10 @@ async function exportReport(reportUrl, pdfPath, previewPath) {
         `(() => {
           const root = document.querySelector('.print-report');
           if (!root) return { ready: false, rows: 0 };
-          const rows = root.querySelectorAll('table tbody tr').length;
+          const tables = root.querySelectorAll('table');
+          const rows = tables[0]?.querySelectorAll('tbody tr').length ?? 0;
           const text = root.textContent ?? '';
-          return { ready: rows >= 5 && !text.includes('aguarda sync'), rows };
+          return { ready: rows >= 15 && !text.includes('aguarda sync'), rows };
         })()`,
       );
       if (state?.ready) {

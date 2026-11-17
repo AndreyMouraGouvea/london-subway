@@ -110,7 +110,9 @@ Adding or removing a slide requires updating `TOTAL_SLIDES` in
   `ReportPage.tsx`, which is `hidden print:block`. Generate it only **after** the
   Pages deploy that contains it.
 - `/report` is a GitHub Pages deep link: it returns HTTP 404 with the SPA HTML
-  and still renders. Wait for table rows before printing.
+  and still renders. Wait for the **first** table (Estado por linha) to reach 15
+  rows before printing; a total row count can pass while the lines table is still
+  empty, producing a report without line status.
 - Source status values are snake_case (`not_synced`); map them for display.
 - Disruption records contain duplicates of the same alert; the deck collapses
   them by line + band + description and says so in the table note.
